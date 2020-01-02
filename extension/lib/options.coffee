@@ -5,6 +5,7 @@ prefs = require('./prefs')
 prefsBulk = require('./prefs-bulk')
 translate = require('./translate')
 utils = require('./utils')
+workarounds = require('./workarounds')
 
 TYPE_MAP = {
   string: 'string'
@@ -125,6 +126,7 @@ class Observer extends BaseObserver
     @injectHeader()
     @injectOptions()
     @injectShortcuts()
+    @injectWorkarounds()
     @setupKeybindings()
 
     if @vimfx.goToCommand
@@ -204,6 +206,61 @@ class Observer extends BaseObserver
           })
 
     return
+
+  injectWorkarounds: ->
+    @appendSetting({
+      type: 'control'
+      title: translate('category.workaround')
+      class: 'first-row'
+    })
+
+    #--
+    onclickHandler = (w, undo, thisButton, otherButton, restartButton) ->
+      thisButton.disabled = true
+      if undo then w.undo() else w.apply()
+
+      if w.is_applied() ^ undo # ok
+        if w.restart
+          restartButton.disabled = false
+          restartButton.closest('.setting').querySelector('.desc').hidden = false
+        otherButton.disabled = false
+      else # error
+        description = thisButton.closest('.setting').querySelector('.desc')
+        description.innerText = translate('error.workaround_not_applied')
+        description.style.color = '#700'
+    #--
+    restartButton = @document.createElement('button')
+    for w in workarounds.filter((w) -> w.is_required())
+      #do (w) => # using this local variable in closures
+        setting = @appendSetting({
+          type: 'control'
+          title: w.name
+          desc: w.desc
+        })
+        applyButton = @document.createElement('button')
+        removeButton = @document.createElement('button')
+        applyButton.innerText = translate("workaround.apply")
+        applyButton.disabled = w.is_applied()
+        applyButton.onclick = onclickHandler.bind(null, w, false, applyButton, removeButton, restartButton)
+        setting.querySelector('.control').appendChild(applyButton)
+        removeButton.innerText = translate("workaround.remove")
+        removeButton.disabled = not w.is_applied()
+        removeButton.onclick = onclickHandler.bind(null, w, true, removeButton, applyButton, restartButton)
+        setting.querySelector('.control').appendChild(removeButton)
+
+    restartSetting = @appendSetting({
+      type: 'control'
+      title: translate('workaround.restart_title')
+      desc: translate('workaround.restart_desc')
+    })
+    restartButton.disabled = true
+    restartButton.innerText = translate('workaround.restart')
+    restartButton.onclick = ->
+      Services.startup.quit(
+        Ci.nsIAppStartup.eAttemptQuit | Ci.nsIAppStartup.eRestart
+      )
+    restartSetting.querySelector('.control').appendChild(restartButton)
+    restartSetting.querySelector('.desc').hidden = true
 
   generateErrorMessage: (pref) ->
     commandErrors = @vimfx.errors[pref] ? []

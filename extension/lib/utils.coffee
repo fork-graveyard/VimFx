@@ -718,6 +718,14 @@ openPopup = (popup) ->
 
 writeToClipboard = (text) -> nsIClipboardHelper.copyString(text)
 
+# Displays a 'doorhanger' notification
+showPopupNotification =
+  (popupId, message, mainAction, secondaryActions, learnMoreURL) ->
+    window = Services.wm.getMostRecentWindow('navigator:browser')
+    window.PopupNotifications.show(window.gBrowser.selectedBrowser, popupId,
+      message, null, mainAction, secondaryActions, {learnMoreURL,
+      'popupIconURL': "#{ADDON_PATH}/content/skin/icon128.png"})
+
 
 
 module.exports = {
@@ -791,4 +799,6 @@ module.exports = {
   openDropdown
   openPopup
   writeToClipboard
+
+  showPopupNotification
 }

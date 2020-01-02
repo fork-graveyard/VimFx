@@ -30,10 +30,11 @@ load = (vimfx, options = null, callback = ->) ->
 
   messageManager.send('loadConfig', null, callback)
 
+# returns true if the sandbox prevents access to frame.js
 checkSandbox = (expandedDir) ->
   prefix = 'security.sandbox.content'
-  if prefs.root.get("#{prefix}.level") > 2
-    return true
+  if prefs.root.get("#{prefix}.level") <= 2
+    return false
 
   if Services.appinfo.OS == 'Darwin'
     whitelisted = [
@@ -70,6 +71,7 @@ loadFile = (dir, file, scope) ->
     return error
 
 module.exports = {
+  checkSandbox
   load
   loadFile
 }

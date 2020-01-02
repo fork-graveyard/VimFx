@@ -23,6 +23,14 @@ test = require('../test/index')
 {AddonManager} = Cu.import('resource://gre/modules/AddonManager.jsm', {})
 
 module.exports = (data, reason) ->
+  if 0 # TODO: check if workarounds necessary; move to better location; implement callbacks; localize
+    utils.showPopupNotification(
+      'vimfx-require-workaround',
+      'VimFx needs to apply some about:config changes to function properly',
+      {'label':'Apply automatically', 'accessKey': 'A', 'callback': ()=>{}},
+      [{'label':'See details', 'accessKey': 'S', 'callback': ()=>{}},
+       {'label':'Ignore', 'accessKey': 'I', 'callback': ()=>{}}]
+    )
   # Set default prefs and apply migrations as early as possible.
   prefs.default.init()
   applyMigrations(migrations)
