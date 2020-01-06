@@ -1,11 +1,15 @@
+# coffeelint: disable=colon_assignment_spacing
+# coffeelint: disable=no_implicit_braces
+
 config = require('./config')
+help = require('./help')
 prefs = require('./prefs')
 utils = require('./utils')
 vimfx = require('./vimfx')
 
 sandbox = 'security.sandbox.content'
 
-module.exports = [
+workarounds = [
   {
     name: 'Devtools stuck in normal mode'
     desc: 'When blurring and refocusing the devtools, VimFx will not enter
@@ -73,9 +77,9 @@ module.exports = [
           prefs.root.set("#{sandbox}.mac.testing_read_path2", null)
       else
         val = prefs.root.get("#{sandbox}.read_path_whitelist").split(',')
-        val = val.filter((e) -> !e.startsWith(dir))
+        val = val.filter((e) -> not e.startsWith(dir))
         prefs.root.set("#{sandbox}.read_path_whitelist", val.join(','))
-    restart: false
+    restart: true
   },
   {
     name: 'Fission is enabled'
@@ -90,3 +94,29 @@ module.exports = [
     restart: true
   },
 ]
+
+askUser = ->
+    utils.showPopupNotification(
+      'vimfx-require-workaround',
+      'VimFx needs to apply some about:config changes to function properly',
+      {
+        'label':'Apply automatically',
+        'accessKey': 'A',
+        'callback': ()=>{}
+      }, [{
+        'label':'See details',
+        'accessKey': 'S',
+        'callback': ()->
+          window = Services.wm.getMostRecentWindow('navigator:browser')
+          help.goToCommandSetting(window, vimfx, 'category.workaround')
+      }, {
+        'label':'Ignore',
+        'accessKey': 'I',
+        'callback': ()=>{}
+      }]
+    )
+
+module.exports = {
+  askUser
+  workarounds
+}

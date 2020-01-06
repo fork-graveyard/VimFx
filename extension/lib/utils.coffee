@@ -721,7 +721,7 @@ writeToClipboard = (text) -> nsIClipboardHelper.copyString(text)
 # Displays a 'doorhanger' notification
 showPopupNotification =
   (popupId, message, mainAction, secondaryActions, learnMoreURL) ->
-    window = Services.wm.getMostRecentWindow('navigator:browser')
+    window = Services.wm.getMostRecentWindow('navigator:browser') # WARN: returns null directly after a restart, causing vimfx to fail in bootstrap
     window.PopupNotifications.show(window.gBrowser.selectedBrowser, popupId,
       message, null, mainAction, secondaryActions, {learnMoreURL,
       'popupIconURL': "#{ADDON_PATH}/content/skin/icon128.png"})

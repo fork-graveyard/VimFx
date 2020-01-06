@@ -129,13 +129,12 @@ class Observer extends BaseObserver
     @injectWorkarounds()
     @setupKeybindings()
 
-    if @vimfx.goToCommand
+    if pref = @document.location.hash
+      pref = pref.slice(1)
       utils.nextTick(@document.ownerGlobal, =>
-        {pref} = @vimfx.goToCommand
         setting = @container.querySelector("[data-pref='#{pref}']")
         setting.scrollIntoView()
-        setting.querySelector('input').select()
-        @vimfx.goToCommand = null
+        setting.querySelector('input')?.select()
       )
 
   injectHeader: ->
@@ -212,48 +211,51 @@ class Observer extends BaseObserver
       type: 'control'
       title: translate('category.workaround')
       class: 'first-row'
+      pref: 'category.workaround'
     })
 
-    #--
-    onclickHandler = (w, undo, thisButton, otherButton, restartButton) ->
+    workaroundHandler = (thisButton, otherButton, restartButton, w, undo) ->
       thisButton.disabled = true
       if undo then w.undo() else w.apply()
+
+      description = thisButton.closest('.setting').querySelector('.desc')
 
       if w.is_applied() ^ undo # ok
         if w.restart
           restartButton.disabled = false
-          restartButton.closest('.setting').querySelector('.desc').hidden = false
+          description.innerText = translate('workaround.need_restart')
+          description.style.color = '#D60'
         otherButton.disabled = false
       else # error
-        description = thisButton.closest('.setting').querySelector('.desc')
         description.innerText = translate('error.workaround_not_applied')
         description.style.color = '#700'
-    #--
+
     restartButton = @document.createElement('button')
-    for w in workarounds.filter((w) -> w.is_required())
-      #do (w) => # using this local variable in closures
-        setting = @appendSetting({
-          type: 'control'
-          title: w.name
-          desc: w.desc
-        })
-        applyButton = @document.createElement('button')
-        removeButton = @document.createElement('button')
-        applyButton.innerText = translate("workaround.apply")
-        applyButton.disabled = w.is_applied()
-        applyButton.onclick = onclickHandler.bind(null, w, false, applyButton, removeButton, restartButton)
-        setting.querySelector('.control').appendChild(applyButton)
-        removeButton.innerText = translate("workaround.remove")
-        removeButton.disabled = not w.is_applied()
-        removeButton.onclick = onclickHandler.bind(null, w, true, removeButton, applyButton, restartButton)
-        setting.querySelector('.control').appendChild(removeButton)
+
+    setupWorkaroundButton = (setting, thisButton, otherButton, w, undo) ->
+      text = if undo then 'workaround.remove' else 'workaround.apply'
+      thisButton.innerText = translate(text)
+      thisButton.disabled = w.is_applied() ^ undo
+      thisButton.onclick = workaroundHandler.bind(
+        null, thisButton, otherButton, restartButton, w, undo
+      )
+      setting.querySelector('.control').appendChild(thisButton)
+
+    for w in workarounds.workarounds.filter((w) -> w.is_required())
+      setting = @appendSetting({
+        type: 'control'
+        title: w.name
+        desc: w.desc
+      })
+      applyButton = @document.createElement('button')
+      removeButton = @document.createElement('button')
+      setupWorkaroundButton(setting, applyButton, removeButton, w, false)
+      setupWorkaroundButton(setting, removeButton, applyButton, w, true)
 
     restartSetting = @appendSetting({
       type: 'control'
       title: translate('workaround.restart_title')
-      desc: translate('workaround.restart_desc')
     })
-    restartButton.disabled = true
     restartButton.innerText = translate('workaround.restart')
     restartButton.onclick = ->
       Services.startup.quit(

@@ -105,7 +105,7 @@ createContent = (window, vimfx) ->
         commandContainer = $('command has-click search-item', categoryContainer)
         commandContainer.setAttribute('data-command', name)
         commandContainer.onclick = goToCommandSetting.bind(
-          null, window, vimfx, command
+          null, window, vimfx, command.pref
         )
         for sequence in enabledSequences
           keySequence = $('key-sequence', commandContainer)
@@ -160,10 +160,9 @@ splitSequence = (sequence, specialKeys) ->
   splitPos = Math.max(specialKeyEnds...)
   return [sequence[0...splitPos], sequence[splitPos..]]
 
-goToCommandSetting = (window, vimfx, command) ->
-  vimfx.goToCommand = command
+goToCommandSetting = (window, vimfx, pref) ->
   removeHelp(window)
-  uri = "#{ADDON_PATH}/content/options.xhtml"
+  uri = "#{ADDON_PATH}/content/options.xhtml##{pref or ''}"
   utils.nextTick(window, ->
     window.gBrowser.selectedTab = window.gBrowser.addTab(uri, {
       triggeringPrincipal: Services.scriptSecurityManager.getSystemPrincipal()
@@ -210,4 +209,5 @@ module.exports = {
   toggleHelp
   getHelp
   getSearchInput
+  goToCommandSetting
 }
