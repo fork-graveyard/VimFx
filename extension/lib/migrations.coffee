@@ -159,4 +159,15 @@ migrations[6] = ->
     prefs.set(newPref, prefs.get(pref))
   return
 
+# Devtools stuck in normal mode
+#
+# When blurring and refocusing the devtools, VimFx will not enter ignore mode
+# when focusing an input element. This workaround will cease to work once Bug
+# 1585747 lands.
+# Regressed by: 1539979 (>=fx70)
+migrations[7] = ->
+  pref = 'devtools.toolbox.content-frame'
+  return unless prefs.root.has(pref)
+  prefs.root.set(pref, false)
+
 module.exports = migrations
