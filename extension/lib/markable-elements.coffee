@@ -17,7 +17,10 @@ MIN_TEXTNODE_SIZE = 4
 find = (window, filter, selector = '*') ->
   viewport = viewportUtils.getWindowViewport(window)
   wrappers = []
+  t0 = window.performance.now()
   getMarkableElements(window, viewport, wrappers, filter, selector)
+  t1 = window.performance.now()
+  console.log("getMarkableElements", t1-t0)
   return wrappers
 
 # `filter` is a function that is given every element in every frame of the page.
@@ -34,8 +37,17 @@ getMarkableElements = (
 ) ->
   {document} = window
 
-  for element in getAllElements(document, selector)
-    continue unless isElementInstance(element)
+  NodeFilter_SHOW_ELEMENT = 1 # not defined in chrome process(?)
+  treeWalkers = [document.createTreeWalker(document, NodeFilter_SHOW_ELEMENT)]
+
+  while (top = treeWalkers.length) > 0
+    treeWalker = treeWalkers[top-1]
+    # since we initialize the TreeWalker to document/shadowroot, we don't care
+    # about the first element (currentNode) and can call nextNode() immediately.
+    # If the iterator has reached its end, pop it and try the next one.
+    unless element = treeWalker.nextNode()
+      treeWalkers.pop()
+      continue
     # `getRects` is fast and filters out most elements, so run it first of all.
     rects = getRects(element, viewport)
     continue unless rects.insideViewport.length > 0
@@ -47,6 +59,8 @@ getMarkableElements = (
         )
     )
     wrappers.push(wrapper)
+    if element.shadowRoot?
+      treeWalkers.push(document.createTreeWalker(element.shadowRoot, NodeFilter_SHOW_ELEMENT))
 
   for frame in window.frames when frame.frameElement
     continue unless result = viewportUtils.getFrameViewport(
@@ -59,20 +73,6 @@ getMarkableElements = (
     )
 
   return
-
-findAllDOMs = (dom) ->
-  return [dom].concat(
-    Array.from(dom.querySelectorAll('*'))
-      .filter((e) -> e.shadowRoot?)
-      .map((e) -> findAllDOMs(e.shadowRoot))...
-  )
-
-getAllElements = (document, selector) ->
-  return [].concat(
-    findAllDOMs(document).map((d) ->
-      Array.from(d.querySelectorAll(selector))
-    )...
-  )
 
 getRects = (element, viewport) ->
   # `element.getClientRects()` returns a list of rectangles, usually just one,
